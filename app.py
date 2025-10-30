@@ -5,7 +5,6 @@ from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import re
 import os
-from dotenv import load_dotenv
 
 # ---------------- CONFIG ----------------
 SHEET_LINK = "https://docs.google.com/spreadsheets/d/1JN_F8ZJ9FePn1OywSNuJrfPaBN8fP4W8W5gciIe0lLI/edit?gid=0#gid=0"
@@ -13,7 +12,7 @@ TAB_NAME = "Sheet1"
 # ----------------------------------------
 
 # Load environment variables
-load_dotenv()
+
 
 st.set_page_config(page_title="Ascend Match Uploader", page_icon="🎯", layout="centered")
 st.title("🎮 Ascend Match Data → Google Sheets")
@@ -21,19 +20,18 @@ st.title("🎮 Ascend Match Data → Google Sheets")
 uploaded_file = st.file_uploader("Upload your JSON match file", type=["json"])
 
 def get_google_credentials():
-    """Build credentials dict from environment variables."""
     creds_dict = {
-        "type": os.getenv("GOOGLE_TYPE"),
-        "project_id": os.getenv("GOOGLE_PROJECT_ID"),
-        "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
-        "private_key": os.getenv("GOOGLE_PRIVATE_KEY").replace("\\n", "\n"),
-        "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
-        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
-        "auth_uri": os.getenv("GOOGLE_AUTH_URI"),
-        "token_uri": os.getenv("GOOGLE_TOKEN_URI"),
-        "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_CERT_URL"),
-        "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_CERT_URL"),
-        "universe_domain": os.getenv("GOOGLE_UNIVERSE_DOMAIN"),
+        "type": st.secrets["GOOGLE"]["GOOGLE_TYPE"],
+        "project_id": st.secrets["GOOGLE"]["GOOGLE_PROJECT_ID"],
+        "private_key_id": st.secrets["GOOGLE"]["GOOGLE_PRIVATE_KEY_ID"],
+        "private_key": st.secrets["GOOGLE"]["GOOGLE_PRIVATE_KEY"].replace("\\n", "\n"),
+        "client_email": st.secrets["GOOGLE"]["GOOGLE_CLIENT_EMAIL"],
+        "client_id": st.secrets["GOOGLE"]["GOOGLE_CLIENT_ID"],
+        "auth_uri": st.secrets["GOOGLE"]["GOOGLE_AUTH_URI"],
+        "token_uri": st.secrets["GOOGLE"]["GOOGLE_TOKEN_URI"],
+        "auth_provider_x509_cert_url": st.secrets["GOOGLE"]["GOOGLE_AUTH_PROVIDER_CERT_URL"],
+        "client_x509_cert_url": st.secrets["GOOGLE"]["GOOGLE_CLIENT_CERT_URL"],
+        "universe_domain": st.secrets["GOOGLE"]["GOOGLE_UNIVERSE_DOMAIN"],
     }
     return creds_dict
 
