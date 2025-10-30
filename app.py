@@ -4,16 +4,38 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 import pandas as pd
 import re
+import os
+from dotenv import load_dotenv
 
 # ---------------- CONFIG ----------------
-SHEET_LINK = "https://docs.google.com/spreadsheets/d/1JN_F8ZJ9FePn1OywSNuJrfPaBN8fP4W8W5gciIe0lLI/edit?gid=0#gid=0"  # 🔹 Replace with your sheet link
-TAB_NAME = "Sheet1"  # 🔹 Replace with your tab name
+SHEET_LINK = "https://docs.google.com/spreadsheets/d/1JN_F8ZJ9FePn1OywSNuJrfPaBN8fP4W8W5gciIe0lLI/edit?gid=0#gid=0"
+TAB_NAME = "Sheet1"
 # ----------------------------------------
+
+# Load environment variables
+load_dotenv()
 
 st.set_page_config(page_title="Ascend Match Uploader", page_icon="🎯", layout="centered")
 st.title("🎮 Ascend Match Data → Google Sheets")
 
 uploaded_file = st.file_uploader("Upload your JSON match file", type=["json"])
+
+def get_google_credentials():
+    """Build credentials dict from environment variables."""
+    creds_dict = {
+        "type": os.getenv("GOOGLE_TYPE"),
+        "project_id": os.getenv("GOOGLE_PROJECT_ID"),
+        "private_key_id": os.getenv("GOOGLE_PRIVATE_KEY_ID"),
+        "private_key": os.getenv("GOOGLE_PRIVATE_KEY").replace("\\n", "\n"),
+        "client_email": os.getenv("GOOGLE_CLIENT_EMAIL"),
+        "client_id": os.getenv("GOOGLE_CLIENT_ID"),
+        "auth_uri": os.getenv("GOOGLE_AUTH_URI"),
+        "token_uri": os.getenv("GOOGLE_TOKEN_URI"),
+        "auth_provider_x509_cert_url": os.getenv("GOOGLE_AUTH_PROVIDER_CERT_URL"),
+        "client_x509_cert_url": os.getenv("GOOGLE_CLIENT_CERT_URL"),
+        "universe_domain": os.getenv("GOOGLE_UNIVERSE_DOMAIN"),
+    }
+    return creds_dict
 
 if uploaded_file:
     data = json.load(uploaded_file)
@@ -36,10 +58,8 @@ if uploaded_file:
 
         rows.append([game_name, agent, kills, deaths, assists, kd, acs, first_kills, clutches, plants])
 
-    # Create DataFrame
     df = pd.DataFrame(rows, columns=["IGN", "Agent", "Kills", "Deaths", "Assists", "K/D", "ACS", "FirstKills", "Clutches", "PostPlants"])
 
-    # Split and sort
     team_a = df.iloc[:5].sort_values(by="ACS", ascending=False).reset_index(drop=True)
     team_b = df.iloc[5:].sort_values(by="ACS", ascending=False).reset_index(drop=True)
 
@@ -48,7 +68,6 @@ if uploaded_file:
     st.subheader("Team B (sorted by ACS)")
     st.dataframe(team_b)
 
-    # Combine for upload
     combined = pd.concat([
         pd.DataFrame([["=== TEAM A ==="] + [""] * (len(df.columns) - 1)], columns=df.columns),
         team_a,
@@ -59,11 +78,11 @@ if uploaded_file:
 
     if st.button("📤 Upload to Google Sheets"):
         try:
+            creds_dict = get_google_credentials()
             scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
-            creds = ServiceAccountCredentials.from_json_keyfile_name("credentials.json", scope)
+            creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, scope)
             client = gspread.authorize(creds)
 
-            # Extract spreadsheet ID from link
             match = re.search(r"/d/([a-zA-Z0-9-_]+)", SHEET_LINK)
             if not match:
                 st.error("❌ Invalid Google Sheet link format.")
@@ -72,14 +91,11 @@ if uploaded_file:
                 spreadsheet = client.open_by_key(sheet_id)
                 worksheet = spreadsheet.worksheet(TAB_NAME)
 
-                # Find range to overwrite (keep sheet size)
-                num_rows = len(combined) + 5  # buffer
+                num_rows = len(combined) + 5
                 num_cols = len(combined.columns)
                 cell_range = f"A1:{chr(65 + num_cols - 1)}{num_rows}"
 
-                # Overwrite the same range each time
                 worksheet.update(cell_range, [combined.columns.values.tolist()] + combined.values.tolist())
-
                 st.success(f"✅ Data successfully updated in '{TAB_NAME}' of linked sheet!")
         except Exception as e:
             st.error(f"❌ Error: {e}")
